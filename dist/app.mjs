@@ -1,4 +1,4 @@
-import { moves, daily, quick, warmup, weeks, allRoutines, timeline } from './mobility.mjs';
+import { moves, daily, quick, warmup, preRun, weeks, allRoutines, timeline } from './mobility.mjs';
 
 const app = document.querySelector('#app');
 const nav = document.querySelector('.nav');
@@ -75,6 +75,7 @@ function isPlanDue() {
   return last <= dateKey(date);
 }
 const planWeek = id => weeks.findIndex(week => week.sessions.some(routine => routine.id === id)) + 1;
+const isPlansWorkout = id => planWeek(id) > 0 || id === warmup.id || id === preRun.id;
 const button = (action,label,style='secondary') => `<button type="button" class="${style}" data-action="${action}">${label}</button>`;
 const heading = (title, subtitle='') => `<div class="page-head"><div><h1>${title}</h1>${subtitle ? `<p>${subtitle}</p>` : ''}</div></div>`;
 const row = (action, name, meta, symbol) => `<button class="row" data-action="${action}"><span class="row-label">${symbol ? `<span class="badge-icon">${icon(symbol)}</span>` : ''}<span><strong>${name}</strong><small>${meta}</small></span></span>${icon('arrow')}</button>`;
@@ -85,7 +86,7 @@ function today() {
   const day = currentDay();
   const actualToday = day === mondayIndex(date);
   const done = actualToday && data.history.some(entry => entry.date === dateKey(date));
-  const resume = actualToday && workout && !planWeek(workout.id) && workout.id !== warmup.id;
+  const resume = actualToday && workout && !isPlansWorkout(workout.id);
   const routine = resume ? routineById[workout.id] : daily[day];
   const complete = done && !resume;
   const dateLabel = new Intl.DateTimeFormat('en',{weekday:'long',month:'long',day:'numeric'}).format(dates[day]);
@@ -110,9 +111,9 @@ function today() {
 
 function routinesPage() {
   const saved = data.saved.map(id => routineById[id]).filter(Boolean);
-  const list = items => items.map(routine => `<section class="panel library-card"><p class="eyebrow">${routine.category}</p><h2>${routine.title}</h2><p>${routine.minutes} min · ${routine.setup}</p>${row('detail:'+routine.id,'View routine',routine.id === 'quick' ? '3 exercises' : 'Choose duration')}</section>`).join('');
+  const list = items => items.map(routine => `<section class="panel library-card"><p class="eyebrow">${routine.category}</p><h2>${routine.title}</h2><p>${routine.minutes} min · ${routine.setup}</p>${row('detail:'+routine.id,'View routine',routine.id === quick.id || routine.continuous ? `${routine.exercises.length} exercises` : 'Choose duration')}</section>`).join('');
   return heading('Routines') + (saved.length ? `<section class="stack"><h2>Saved</h2><div class="columns">${list(saved)}</div></section><br>` : '') +
-    `<div class="columns">${list([...daily,warmup,quick])}</div><section class="panel" style="margin-top:15px"><details><summary><strong>Exercise library · 30 movements</strong></summary><ul class="steps">${Object.values(moves).map(move => `<li>${move.name}<small>${move.side ? '30 sec per side' : '30 sec'} · ${move.cue}</small></li>`).join('')}</ul></details></section>`;
+    `<div class="columns">${list([...daily,warmup,quick])}</div><section class="panel" style="margin-top:15px"><details><summary><strong>Exercise library · ${Object.keys(moves).length} entries</strong></summary><ul class="steps">${Object.values(moves).map(move => `<li>${move.name}<small>${move.side ? '30 sec per side' : '30 sec'} · ${move.cue}</small></li>`).join('')}</ul></details></section>`;
 }
 
 function routineDetail() {
@@ -120,7 +121,7 @@ function routineDetail() {
   const exercises = timeline(routine,detail.minutes).filter(phase => phase.type === 'move' && phase.side !== 'Right');
   const saved = data.saved.includes(routine.id);
   return heading(routine.title,routine.setup) + `<section class="panel details">
-    <div class="actions">${(routine.id === 'quick' ? [2] : [8,12,15]).map(minutes => `<button class="chip" data-action="duration:${minutes}" aria-pressed="${detail.minutes === minutes}">${minutes} min</button>`).join('')}</div>
+    ${routine.continuous ? `<p>${routine.minutes} min · 30 sec per exercise</p>` : `<div class="actions">${(routine.id === quick.id ? [2] : [8,12,15]).map(minutes => `<button class="chip" data-action="duration:${minutes}" aria-pressed="${detail.minutes === minutes}">${minutes} min</button>`).join('')}</div>`}
     <ol class="steps">${exercises.map(phase => `<li><strong>${moves[phase.key].name}</strong><small>${phase.side ? '30 sec per side' : '30 sec'} · ${moves[phase.key].cue}</small></li>`).join('')}</ol>
     <div class="actions">${button(`start:${routine.id}:${detail.minutes}`,icon('play')+` Start ${detail.minutes} min`,'primary')}${button('favorite:'+routine.id,icon('bookmark')+(saved?' Saved':' Save routine'))}</div></section>`;
 }
@@ -131,10 +132,15 @@ function plansPage() {
   const sessions = weekSessions(planChoice);
   const complete = sessions.filter(routine => data.progress.includes(routine.id)).length;
   const next = sessions.find(routine => !data.progress.includes(routine.id));
-  const paused = workout && (planWeek(workout.id) || workout.id === warmup.id) ? routineById[workout.id] : null;
-  return heading('Climbing plans','Two sessions a week for hips, ankles and foot placement.')+`
+  const paused = workout && isPlansWorkout(workout.id) ? routineById[workout.id] : null;
+  return heading('Plans')+`
     <div class="studio-grid"><section class="stack">
       ${paused ? `<section class="panel">${row('resume',paused.title,'Resume workout','play')}</section>` : ''}
+      <section class="panel" aria-labelledby="runners-heading">
+        <h2 id="runners-heading">For Runners</h2>
+        ${row('detail:'+preRun.id,preRun.title,`${preRun.minutes} min · ${preRun.exercises.length} exercises`,'clock')}
+      </section>
+      <div><h2>Climbing plans</h2><p class="muted">Two sessions a week for hips, ankles and foot placement.</p></div>
       <div class="actions" aria-label="Plan length">${[2,3,4,6].map(length => `<button class="chip" data-action="plan:${length}" aria-pressed="${length === planChoice}">${length} weeks</button>`).join('')}</div>
       <section class="panel">
         <h2>${active ? (next ? `Week ${planWeek(next.id)} of ${planChoice}` : 'Plan complete') : ({2:'Hips & Ankles',3:'High Steps',4:'Lateral Reach',6:'Climbing Mobility'})[planChoice]}</h2>
@@ -276,11 +282,11 @@ function player() {
   const name = phase.type === 'ready' ? 'Get ready' : phase.type === 'switch' ? 'Switch sides' : moves[phase.key].name;
   const cue = moving ? moves[phase.key].cue : phase.type === 'ready' ? routine.setup : `${moves[phase.key].name}${phase.side ? ' · '+phase.side : ''}`;
   return `<section class="player">
-    <div class="player-top">${button('today','Back to Today','text-button')}<strong>${routine.title}</strong></div>
+    <div class="player-top">${routine.id === preRun.id ? button('plans','Back to Plans','text-button') : button('today','Back to Today','text-button')}<strong>${routine.title}</strong></div>
     <div class="player-card"><p class="eyebrow">${phase.number ? `Exercise ${phase.number} of ${phase.count}` : 'Starting soon'}${moving && phase.side ? ' · '+phase.side : ''}</p>
     <h1>${name}</h1><div class="clock" id="clock" role="timer">${clock(Math.ceil((workout.end ? Math.max(0,workout.end-Date.now()) : workout.left)/1000))}</div><p class="cue">${cue}</p></div>
     ${next ? `<p class="player-next muted">Next · ${moves[next.key].name}${next.side ? ' · '+next.side : ''}</p>` : ''}
-    <div class="actions">${workout.end ? button('pause','Pause','primary') : button('resume','Resume','primary')}${button('skip','Skip interval')}${button('sound',data.sound?'Mute':'Unmute','text-button')}</div></section>`;
+    <div class="actions">${workout.end ? button('pause','Pause','primary') : button('resume','Resume','primary')}${button('skip',routine.continuous ? 'Skip exercise' : 'Skip interval')}${button('sound',data.sound?'Mute':'Unmute','text-button')}</div></section>`;
 }
 
 function finishPage() {

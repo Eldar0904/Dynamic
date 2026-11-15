@@ -30,7 +30,17 @@ export const moves = {
   quad: move('Supported standing quad stretch', true, 'Use the wall for balance. Bring the named heel toward your seat and keep knees close.', 'Wall'),
   cat: move('Cat-cow', false, 'On hands and knees, slowly round your back, then gently lift your chest.', 'Floor'),
   fold: move('Standing hip fold', false, 'Soften both knees. Fold from the hips to a comfortable depth and come back up.'),
-  bridge: move('Glute bridge', false, 'Lie with knees bent. Press both feet down and lift your hips, then lower slowly.', 'Floor')
+  bridge: move('Glute bridge', false, 'Lie with knees bent. Press both feet down and lift your hips, then lower slowly.', 'Floor'),
+  runSwingRight: move('Single-leg swings · Right', false, 'Swing your right leg forward and back. Tap your toes behind you for balance.'),
+  runSwingLeft: move('Single-leg swings · Left', false, 'Swing your left leg forward and back. Tap your toes behind you for balance.'),
+  openGates: move('Alternating open the gates', false, 'Lift one knee and circle it outward. Take three light steps in place, then switch sides.'),
+  bodyweightSquat: move('Bodyweight squats', false, 'Stand with feet shoulder-width and toes slightly out. Keep heels down and knees tracking over your toes.'),
+  overheadReach: move('Overhead arm extensions', false, 'Reach one arm overhead as the other reaches down and slightly back. Alternate with control.'),
+  footRocks: move('Foot rocks', false, 'Rock back onto your heels to lift your toes, then rise onto the balls of your feet.'),
+  lateralLunges: move('Side-to-side lunges', false, 'Shift from side to side with heels down. Let the bent knee track over your toes.'),
+  singleLegRdl: move('Alternating single-leg Romanian deadlifts', false, 'Keep a soft bend in your standing knee and hinge at the hip as the other leg reaches back. Alternate sides.'),
+  kickBacks: move('Kick backs', false, 'Stand tall and reach one leg back from the hip. Lower it and alternate sides.'),
+  legExtensions: move('Leg extensions', false, 'Lift one knee, straighten the leg in front, then lower it with control. Alternate sides.')
 };
 
 const routine = (id, title, category, setup, exercises, minutes = 8) =>
@@ -48,6 +58,10 @@ export const daily = [
 
 export const quick = routine('quick', '2-minute Reset', 'Quick reset', 'Standing · Wall nearby', 'arms hinge heel', 2);
 export const warmup = routine('warmup', 'Before You Climb', 'Climbing warm-up', 'Wall and floor', 'arms thread circles scap wrists fingers lateral heel ankle');
+export const preRun = {
+  ...routine('pre-run', 'Pre-Run Warm-Up', 'Running warm-up', 'Standing · No equipment', 'runSwingRight runSwingLeft openGates bodyweightSquat overheadReach footRocks lateralLunges singleLegRdl kickBacks legExtensions', 5),
+  continuous:true
+};
 
 const plan = (id, title, setup, exercises) => routine(id, title, 'Climbing mobility', setup, exercises);
 export const weeks = [
@@ -70,9 +84,15 @@ export const weeks = [
     plan('p6a','Repeat High Steps','Wall and low step','heel circles ankle high step balance squat hinge'),
     plan('p6b','Repeat Lateral Reach','Wall and floor','switches adductor sideSwing cossack lateral balance squat hinge')] }
 ];
-export const allRoutines = [...daily, quick, warmup, ...weeks.flatMap(week => week.sessions)];
+export const allRoutines = [...daily, quick, warmup, preRun, ...weeks.flatMap(week => week.sessions)];
 
 export function timeline(routine, minutes) {
+  if (routine.continuous) {
+    return routine.exercises.map((key, index) => ({
+      key, type:'move', seconds:30, side:'', number:index+1, count:routine.exercises.length
+    }));
+  }
+
   const phases = [{ type:'ready', seconds:10 }];
   let exercises = [...routine.exercises];
   const target = minutes * 60;
