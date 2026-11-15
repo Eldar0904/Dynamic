@@ -58,10 +58,11 @@ export const daily = [
 
 export const quick = routine('quick', '2-minute Reset', 'Quick reset', 'Standing · Wall nearby', 'arms hinge heel', 2);
 export const warmup = routine('warmup', 'Before You Climb', 'Climbing warm-up', 'Wall and floor', 'arms thread circles scap wrists fingers lateral heel ankle');
-export const preRun = {
-  ...routine('pre-run', 'Pre-Run Warm-Up', 'Running warm-up', 'Standing · No equipment', 'runSwingRight runSwingLeft openGates bodyweightSquat overheadReach footRocks lateralLunges singleLegRdl kickBacks legExtensions', 5),
-  continuous:true
-};
+const preRunMoves = 'runSwingRight runSwingLeft openGates bodyweightSquat overheadReach footRocks lateralLunges singleLegRdl kickBacks legExtensions';
+const switchSeconds = 5;
+const preRunCount = preRunMoves.split(' ').length;
+const preRunMinutes = (preRunCount * 30 + (preRunCount - 1) * switchSeconds) / 60;
+export const preRun = routine('pre-run', 'Pre-Run Warm-Up', 'Running warm-up', 'Standing · No equipment', preRunMoves, preRunMinutes);
 
 const plan = (id, title, setup, exercises) => routine(id, title, 'Climbing mobility', setup, exercises);
 export const weeks = [
@@ -87,10 +88,18 @@ export const weeks = [
 export const allRoutines = [...daily, quick, warmup, preRun, ...weeks.flatMap(week => week.sessions)];
 
 export function timeline(routine, minutes) {
-  if (routine.continuous) {
-    return routine.exercises.map((key, index) => ({
-      key, type:'move', seconds:30, side:'', number:index+1, count:routine.exercises.length
-    }));
+  if (routine.id === preRun.id) {
+    const phases = [];
+    // Saved five-minute warm-ups resume with their original exercise indices.
+    const includeSwitches = minutes !== 5;
+    routine.exercises.forEach((key, index) => {
+      const label = { key, side:'', number:index+1, count:routine.exercises.length };
+      if (includeSwitches && index > 0) {
+        phases.push({ ...label, type:'transition', seconds:switchSeconds });
+      }
+      phases.push({ ...label, type:'move', seconds:30 });
+    });
+    return phases;
   }
 
   const phases = [{ type:'ready', seconds:10 }];

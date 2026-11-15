@@ -29,6 +29,7 @@ let detail = { id:daily[0].id, minutes:8 };
 let finish = null;
 let workout = data.workout && routineById[data.workout.id] ? { ...data.workout, end:null } : null;
 let phases = workout ? timeline(routineById[workout.id], workout.minutes) : [];
+let countdownSecond = null;
 let wakeLock;
 let audio;
 let storageError = false;
@@ -40,6 +41,7 @@ const currentDay = () => selectedDay ?? mondayIndex(new Date());
 const weekSessions = count => weeks.slice(0,count).flatMap(week => week.sessions);
 const formatMinutes = seconds => Number((seconds/60).toFixed(1));
 const clock = seconds => `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+const routineDuration = minutes => Number.isInteger(minutes) ? `${minutes} min` : clock(Math.round(minutes * 60));
 const shortDate = date => new Intl.DateTimeFormat('en',{month:'short',day:'numeric'}).format(date);
 const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -111,7 +113,7 @@ function today() {
 
 function routinesPage() {
   const saved = data.saved.map(id => routineById[id]).filter(Boolean);
-  const list = items => items.map(routine => `<section class="panel library-card"><p class="eyebrow">${routine.category}</p><h2>${routine.title}</h2><p>${routine.minutes} min · ${routine.setup}</p>${row('detail:'+routine.id,'View routine',routine.id === quick.id || routine.continuous ? `${routine.exercises.length} exercises` : 'Choose duration')}</section>`).join('');
+  const list = items => items.map(routine => `<section class="panel library-card"><p class="eyebrow">${routine.category}</p><h2>${routine.title}</h2><p>${routineDuration(routine.minutes)} · ${routine.setup}</p>${row('detail:'+routine.id,'View routine',routine.id === quick.id || routine.id === preRun.id ? `${routine.exercises.length} exercises` : 'Choose duration')}</section>`).join('');
   return heading('Routines') + (saved.length ? `<section class="stack"><h2>Saved</h2><div class="columns">${list(saved)}</div></section><br>` : '') +
     `<div class="columns">${list([...daily,warmup,quick])}</div><section class="panel" style="margin-top:15px"><details><summary><strong>Exercise library · ${Object.keys(moves).length} entries</strong></summary><ul class="steps">${Object.values(moves).map(move => `<li>${move.name}<small>${move.side ? '30 sec per side' : '30 sec'} · ${move.cue}</small></li>`).join('')}</ul></details></section>`;
 }
@@ -121,9 +123,9 @@ function routineDetail() {
   const exercises = timeline(routine,detail.minutes).filter(phase => phase.type === 'move' && phase.side !== 'Right');
   const saved = data.saved.includes(routine.id);
   return heading(routine.title,routine.setup) + `<section class="panel details">
-    ${routine.continuous ? `<p>${routine.minutes} min · 30 sec per exercise</p>` : `<div class="actions">${(routine.id === quick.id ? [2] : [8,12,15]).map(minutes => `<button class="chip" data-action="duration:${minutes}" aria-pressed="${detail.minutes === minutes}">${minutes} min</button>`).join('')}</div>`}
+    ${routine.id === preRun.id ? `<p>${routineDuration(routine.minutes)} · 30 sec per exercise · 5 sec to switch</p>` : `<div class="actions">${(routine.id === quick.id ? [2] : [8,12,15]).map(minutes => `<button class="chip" data-action="duration:${minutes}" aria-pressed="${detail.minutes === minutes}">${minutes} min</button>`).join('')}</div>`}
     <ol class="steps">${exercises.map(phase => `<li><strong>${moves[phase.key].name}</strong><small>${phase.side ? '30 sec per side' : '30 sec'} · ${moves[phase.key].cue}</small></li>`).join('')}</ol>
-    <div class="actions">${button(`start:${routine.id}:${detail.minutes}`,icon('play')+` Start ${detail.minutes} min`,'primary')}${button('favorite:'+routine.id,icon('bookmark')+(saved?' Saved':' Save routine'))}</div></section>`;
+    <div class="actions">${button(`start:${routine.id}:${detail.minutes}`,icon('play')+` Start ${routineDuration(detail.minutes)}`,'primary')}${button('favorite:'+routine.id,icon('bookmark')+(saved?' Saved':' Save routine'))}</div></section>`;
 }
 
 const progressBar = (value,max) => `<div class="progress" role="progressbar" aria-label="Plan progress" aria-valuenow="${value}" aria-valuemin="0" aria-valuemax="${max}"><span style="width:${100*value/max}%"></span></div>`;
@@ -138,7 +140,7 @@ function plansPage() {
       ${paused ? `<section class="panel">${row('resume',paused.title,'Resume workout','play')}</section>` : ''}
       <section class="panel" aria-labelledby="runners-heading">
         <h2 id="runners-heading">For Runners</h2>
-        ${row('detail:'+preRun.id,preRun.title,`${preRun.minutes} min · ${preRun.exercises.length} exercises`,'clock')}
+        ${row('detail:'+preRun.id,preRun.title,`${routineDuration(preRun.minutes)} · ${preRun.exercises.length} exercises`,'clock')}
       </section>
       <div><h2>Climbing plans</h2><p class="muted">Two sessions a week for hips, ankles and foot placement.</p></div>
       <div class="actions" aria-label="Plan length">${[2,3,4,6].map(length => `<button class="chip" data-action="plan:${length}" aria-pressed="${length === planChoice}">${length} weeks</button>`).join('')}</div>
@@ -157,7 +159,7 @@ function plansPage() {
 function historyPage() {
   return heading('Activity')+`<div class="columns"><div class="stack">
     <section class="panel"><h2>This week</h2><p>${summary()}</p>${weekStrip()}</section>
-    <section class="panel"><h2>Completed sessions</h2>${data.history.length ? [...data.history].reverse().map(entry => `<div class="row"><span><strong>${escape(routineById[entry.id]?.title || 'Mobility')}</strong><small>${shortDate(new Date(entry.date+'T12:00:00'))} · ${formatMinutes(entry.seconds)} min</small></span>${icon('check')}</div>`).join('') : '<p>No completed sessions yet.</p>'}</section></div>
+    <section class="panel"><h2>Completed sessions</h2>${data.history.length ? [...data.history].reverse().map(entry => `<div class="row"><span><strong>${escape(routineById[entry.id]?.title || 'Mobility')}</strong><small>${shortDate(new Date(entry.date+'T12:00:00'))} · ${entry.id === preRun.id ? routineDuration(entry.seconds/60) : `${formatMinutes(entry.seconds)} min`}</small></span>${icon('check')}</div>`).join('') : '<p>No completed sessions yet.</p>'}</section></div>
     <div class="stack"><section class="panel"><h2>Reminder</h2><p>Choose a daily time. Dynamic can show a reminder while it’s open and skips days you’ve already moved.</p>
       <form id="reminder-form" class="input-row"><label for="reminder-time">Daily time</label><input required id="reminder-time" type="time" value="${/^\d\d:\d\d$/.test(data.reminder)?data.reminder:''}"><button class="primary">Save</button>${data.reminder?button('reminder-off','Turn off'):''}</form>
       ${data.reminder?'<p class="hint">Reminder on.</p>':''}
@@ -185,20 +187,23 @@ function initializeAudio() {
     if (audio.state === 'suspended') audio.resume().catch(() => {});
   } catch { audio = null; }
 }
-function chime(complete = false) {
+function chime(kind = 'switch') {
   if (!data.sound || audio?.state !== 'running') return;
+  const complete = kind === 'complete';
+  const countdown = kind === 'countdown';
+  const duration = complete ? .36 : countdown ? .10 : .20;
   const tone = audio.createOscillator();
   const volume = audio.createGain();
   const time = audio.currentTime;
   tone.type = 'sine';
-  tone.frequency.setValueAtTime(complete ? 659 : 523,time);
+  tone.frequency.setValueAtTime(complete ? 659 : countdown ? 740 : 523,time);
   if (complete) tone.frequency.setValueAtTime(784,time+.13);
   volume.gain.setValueAtTime(.0001,time);
   volume.gain.exponentialRampToValueAtTime(.12,time+.02);
-  volume.gain.exponentialRampToValueAtTime(.0001,time+(complete?.36:.2));
+  volume.gain.exponentialRampToValueAtTime(.0001,time+duration);
   tone.connect(volume).connect(audio.destination);
   tone.start(time);
-  tone.stop(time+(complete?.37:.21));
+  tone.stop(time+duration+.01);
 }
 
 function begin(id,minutes) {
@@ -206,6 +211,7 @@ function begin(id,minutes) {
   if (workout && !window.confirm('Replace your unfinished session?')) return;
   initializeAudio();
   phases = timeline(routineById[id],minutes);
+  countdownSecond = null;
   workout = {id,minutes,index:0,left:phases[0].seconds*1000,end:Date.now()+phases[0].seconds*1000,performed:0,skipped:false,token:globalThis.crypto?.randomUUID?.() || String(Date.now())};
   screen = 'player';
   save();
@@ -249,7 +255,7 @@ function completeWorkout() {
   save();
   releaseWake();
   screen = 'finish';
-  chime(true);
+  chime('complete');
 }
 function advance(now,skipped = false) {
   const phase = phases[workout.index];
@@ -257,6 +263,7 @@ function advance(now,skipped = false) {
   if (skipped && phase.type === 'move') workout.skipped = true;
   creditPhase(skipped ? (running ? Math.max(0,workout.end-now) : workout.left) : 0);
   workout.index += 1;
+  countdownSecond = null;
   if (workout.index === phases.length) { completeWorkout(); return; }
   workout.left = phases[workout.index].seconds*1000;
   workout.end = running ? now+workout.left : null;
@@ -270,8 +277,15 @@ function tick(now = Date.now()) {
     changed = true;
   }
   if (changed) render();
+  if (!workout) return;
+  const remaining = Math.ceil((workout.end ? Math.max(0,workout.end-now) : workout.left)/1000);
+  if (workout.end && workout.id === preRun.id && phases[workout.index].type === 'move' &&
+      remaining >= 1 && remaining <= 3 && remaining !== countdownSecond) {
+    countdownSecond = remaining;
+    chime('countdown');
+  }
   const timer = app.querySelector('#clock');
-  if (timer && workout) timer.textContent = clock(Math.ceil((workout.end ? Math.max(0,workout.end-now) : workout.left)/1000));
+  if (timer) timer.textContent = clock(remaining);
 }
 
 function player() {
@@ -279,19 +293,20 @@ function player() {
   const phase = phases[workout.index];
   const next = phases.slice(workout.index+1).find(item => item.type === 'move');
   const moving = phase.type === 'move';
-  const name = phase.type === 'ready' ? 'Get ready' : phase.type === 'switch' ? 'Switch sides' : moves[phase.key].name;
+  const switchingExercise = routine.id === preRun.id && phase.type === 'transition';
+  const name = phase.type === 'ready' ? 'Get ready' : phase.type === 'switch' ? 'Switch sides' : switchingExercise ? 'Switch exercise' : moves[phase.key].name;
   const cue = moving ? moves[phase.key].cue : phase.type === 'ready' ? routine.setup : `${moves[phase.key].name}${phase.side ? ' · '+phase.side : ''}`;
   return `<section class="player">
     <div class="player-top">${routine.id === preRun.id ? button('plans','Back to Plans','text-button') : button('today','Back to Today','text-button')}<strong>${routine.title}</strong></div>
     <div class="player-card"><p class="eyebrow">${phase.number ? `Exercise ${phase.number} of ${phase.count}` : 'Starting soon'}${moving && phase.side ? ' · '+phase.side : ''}</p>
     <h1>${name}</h1><div class="clock" id="clock" role="timer">${clock(Math.ceil((workout.end ? Math.max(0,workout.end-Date.now()) : workout.left)/1000))}</div><p class="cue">${cue}</p></div>
-    ${next ? `<p class="player-next muted">Next · ${moves[next.key].name}${next.side ? ' · '+next.side : ''}</p>` : ''}
-    <div class="actions">${workout.end ? button('pause','Pause','primary') : button('resume','Resume','primary')}${button('skip',routine.continuous ? 'Skip exercise' : 'Skip interval')}${button('sound',data.sound?'Mute':'Unmute','text-button')}</div></section>`;
+    ${next && !switchingExercise ? `<p class="player-next muted">Next · ${moves[next.key].name}${next.side ? ' · '+next.side : ''}</p>` : ''}
+    <div class="actions">${workout.end ? button('pause','Pause','primary') : button('resume','Resume','primary')}${button('skip',routine.id === preRun.id && moving ? 'Skip exercise' : 'Skip interval')}${button('sound',data.sound?'Mute':'Unmute','text-button')}</div></section>`;
 }
 
 function finishPage() {
   return `<section class="player panel finish"><div class="celebration">${icon('check')}</div>
-    <h1>${finish.skipped ? 'Session ended' : 'Session complete'}</h1><p>${formatMinutes(finish.seconds)} min · ${summary()}</p>
+    <h1>${finish.skipped ? 'Session ended' : 'Session complete'}</h1><p>${finish.id === preRun.id ? routineDuration(finish.seconds/60) : `${formatMinutes(finish.seconds)} min`} · ${summary()}</p>
     ${finish.planSession ? `<p>${activePlan().filter(item => data.progress.includes(item.id)).length} of ${data.plan*2} plan sessions complete</p>` : ''}
     <div class="actions">${button('today','Done','primary')}${button('favorite:'+finish.id,icon('bookmark')+(data.saved.includes(finish.id)?' Saved':' Save routine'))}</div></section>`;
 }
