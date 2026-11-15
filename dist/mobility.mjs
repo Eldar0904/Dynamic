@@ -43,49 +43,44 @@ export const moves = {
   legExtensions: move('Leg extensions', false, 'Lift one knee, straighten the leg in front, then lower it with control. Alternate sides.')
 };
 
-const routine = (id, title, category, setup, exercises, minutes = 8) =>
-  ({ id, title, category, setup, exercises: exercises.split(' '), minutes });
+const routine = (id, title, setup, exercises, minutes = 8) =>
+  ({ id, title, setup, exercises: exercises.split(' '), minutes });
+
+export const dailyDurations = [8, 12, 15];
+
+function dailyRoutine(id, title, focus, base, extra12, extra15) {
+  const session = routine(id, title, 'Wall and floor', base);
+  const extended = [...session.exercises, ...extra12.split(' ')];
+  return { ...session, focus, variants: { 8:session.exercises, 12:extended, 15:[...extended, ...extra15.split(' ')] } };
+}
 
 export const daily = [
-  routine('hips-ankles', 'Hips & Ankles', 'Hips + ankles', 'Wall and floor', 'circles switches adductor ankle bentCalf cossack squat heel'),
-  routine('standing', 'Standing Hips & Hamstrings', 'Standing only', 'Wall nearby', 'swing sideSwing hinge calf quad circles fold heel'),
-  routine('side-reach', 'Inner Thighs & Side Reach', 'Hips + inner thighs', 'Wall and floor', 'switches adductor sideSwing cossack lateral lunge hinge squat'),
-  routine('balance', 'Feet, Calves & Balance', 'Feet + ankles', 'Wall nearby', 'heel ankle calf bentCalf balance circles hinge squat'),
-  routine('rotation', 'Hip Flexors & Rotation', 'Hips + spine', 'Floor space', 'cat hipFlexor hamstring lunge lifts thread march bridge'),
-  routine('high-step', 'High-Step Mobility', 'Hips + balance', 'Wall and low step', 'heel circles ankle high step balance squat hinge'),
-  routine('easy-flow', 'Easy Lower-Body Flow', 'Easy mobility', 'Wall and floor', 'cat switches hipFlexor hamstring adductor ankle calf bridge')
+  dailyRoutine('daily-reach', 'Reach & Rotate', 'Shoulders, upper back and hips',
+    'arms scap ankle lunge cat thread hipFlexor hamstring', 'switches lifts adductor bridge', 'wrists calf quad'),
+  dailyRoutine('daily-hinge', 'Hinge & Open', 'Shoulders, hamstrings and ankles',
+    'arms swing calf hinge scap quad thread hamstring', 'cat lunge hipFlexor switches', 'fold adductor ankle'),
+  dailyRoutine('daily-lateral', 'Side-to-Side Flow', 'Upper back, inner thighs and hips',
+    'arms sideSwing lateral cossack squat cat thread adductor', 'wrists balance circles switches', 'scap lunge hipFlexor'),
+  dailyRoutine('daily-balance', 'Footwork & Reach', 'Shoulders, feet and balance',
+    'heel ankle balance scap swing lunge cat thread', 'arms calf bentCalf bridge', 'wrists lateral hamstring'),
+  dailyRoutine('daily-rotation', 'Spine & Hip Rotation', 'Spine, shoulders and hip flexors',
+    'arms circles lateral lunge cat thread hipFlexor switches', 'scap lifts adductor march', 'wrists hamstring quad'),
+  dailyRoutine('daily-control', 'Hips & Shoulder Control', 'Shoulders, hips and ankles',
+    'arms ankle cossack scap cat thread lifts adductor', 'wrists lunge hipFlexor switches', 'bridge balance hamstring'),
+  dailyRoutine('daily-stretch', 'Full-Body Stretch', 'Upper back, hips and calves',
+    'arms calf quad fold cat thread hipFlexor hamstring', 'scap ankle adductor switches', 'bridge bentCalf lifts')
 ];
 
-export const quick = routine('quick', '2-minute Reset', 'Quick reset', 'Standing · Wall nearby', 'arms hinge heel', 2);
-export const warmup = routine('warmup', 'Before You Climb', 'Climbing warm-up', 'Wall and floor', 'arms thread circles scap wrists fingers lateral heel ankle');
+export const climbing = [
+  routine('climb-hips', 'Hips & High Steps', 'Wall, floor and low step', 'heel ankle high step cossack squat switches adductor'),
+  routine('climb-shoulders', 'Shoulders, Wrists & Reach', 'Wall and floor', 'arms scap wrists fingers lunge thread cat adductor bridge switches'),
+  routine('climb-full', 'Full-Body Climbing Mobility', 'Wall and floor', 'arms circles ankle scap lateral lunge thread cat')
+];
 const preRunMoves = 'runSwingRight runSwingLeft openGates bodyweightSquat overheadReach footRocks lateralLunges singleLegRdl kickBacks legExtensions';
 const switchSeconds = 5;
 const preRunCount = preRunMoves.split(' ').length;
 const preRunMinutes = (preRunCount * 30 + (preRunCount - 1) * switchSeconds) / 60;
-export const preRun = routine('pre-run', 'Pre-Run Warm-Up', 'Running warm-up', 'Standing · No equipment', preRunMoves, preRunMinutes);
-
-const plan = (id, title, setup, exercises) => routine(id, title, 'Climbing mobility', setup, exercises);
-export const weeks = [
-  { name:'Find your range', sessions:[
-    plan('p1a','Hip Range','Wall and floor','circles switches adductor hipFlexor cossack lifts bridge squat'),
-    plan('p1b','Ankle Range','Wall nearby','heel ankle bentCalf calf circles balance squat hinge')] },
-  { name:'Control the range', sessions:[
-    plan('p2a','Hip Rotation','Wall and floor','switches lifts circles cossack adductor hipFlexor squat bridge'),
-    plan('p2b','Foot Placement','Wall and low step','heel balance ankle high step calf hinge squat')] },
-  { name:'High steps', sessions:[
-    plan('p3a','Lift and Place','Wall and low step','heel circles ankle high step balance squat hinge'),
-    plan('p3b','High-Step Setup','Wall, floor and low step','switches ankle lifts high hipFlexor step heel squat')] },
-  { name:'Lateral reach', sessions:[
-    plan('p4a','Shift Sideways','Wall and floor','switches adductor sideSwing cossack lateral balance squat hinge'),
-    plan('p4b','Transfer Weight','Wall and low step','heel ankle balance lateral step high squat hinge')] },
-  { name:'Put it together', sessions:[
-    plan('p5a','High Foot + Side Reach','Wall and low step','heel ankle cossack high lateral step squat hinge'),
-    plan('p5b','Hips + Upper Back','Wall and floor','cat thread lunge circles hipFlexor adductor scap switches')] },
-  { name:'Repeat and compare', sessions:[
-    plan('p6a','Repeat High Steps','Wall and low step','heel circles ankle high step balance squat hinge'),
-    plan('p6b','Repeat Lateral Reach','Wall and floor','switches adductor sideSwing cossack lateral balance squat hinge')] }
-];
-export const allRoutines = [...daily, quick, warmup, preRun, ...weeks.flatMap(week => week.sessions)];
+export const preRun = routine('pre-run', 'Pre-Run Warm-Up', 'Standing · No equipment', preRunMoves, preRunMinutes);
 
 export function timeline(routine, minutes) {
   if (routine.id === preRun.id) {
@@ -103,28 +98,14 @@ export function timeline(routine, minutes) {
   }
 
   const phases = [{ type:'ready', seconds:10 }];
-  let exercises = [...routine.exercises];
+  const exercises = routine.variants?.[minutes] ?? routine.exercises;
   const target = minutes * 60;
-  const total = list => 10 + list.reduce((seconds, key) => seconds + (moves[key].side ? 65 : 30), 0);
-  const fits = list => target - total(list) >= (list.length - 1) * 5 &&
-    target - total(list) <= (list.length - 1) * 10;
-
-  if (!fits(exercises)) {
-    // Extend a routine with an ordered repeat of familiar movements. Use the
-    // same pool to add a single bilateral or unilateral drill when needed.
-    const pool = [...routine.exercises, 'hinge', 'circles'];
-    let match;
-    for (let count = 0; count <= pool.length * 2 && !match; count += 1) {
-      const base = [...exercises, ...Array.from({ length:count }, (_, i) => pool[i % pool.length])];
-      match = [base, ...pool.map(key => [...base, key])].find(fits);
-      if (total(base) > target) break;
-    }
-    if (!match) throw new Error(`No ${minutes}-minute timing for ${routine.id}`);
-    exercises = match;
-  }
-
   const gaps = exercises.length - 1;
-  const gapSeconds = target - total(exercises);
+  const exerciseSeconds = exercises.reduce((seconds, key) => seconds + (moves[key].side ? 60 + switchSeconds : 30), 0);
+  const gapSeconds = target - phases[0].seconds - exerciseSeconds;
+  if (gapSeconds < gaps * 5 || gapSeconds > gaps * 10) {
+    throw new Error(`No ${minutes}-minute timing for ${routine.id}`);
+  }
   const secondsPerGap = Math.floor(gapSeconds / gaps);
   const longerGaps = gapSeconds % gaps;
   exercises.forEach((key, index) => {

@@ -2,6 +2,7 @@
   "id": "./",
   "name": "Dynamic",
   "short_name": "Dynamic",
+  "description": "Daily full-body mobility and routines for runners and climbers.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -1,4 +1,4 @@
-const cacheName = 'dynamic-shell-8';
+const cacheName = 'dynamic-shell-9';
 const assets = ['./', './index.html', './style.css', './mobility-hero-neutral.jpg', './app.mjs', './mobility.mjs', './app.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {
