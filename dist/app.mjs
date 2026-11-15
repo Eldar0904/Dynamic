@@ -1,9 +1,11 @@
-import { moves, daily, dailyDurations, climbing, preRun, timeline } from './mobility.mjs';
+import { moves, daily, dailyDurations, climbing, strong, preRun, timeline } from './mobility.mjs';
+import { mountExerciseDemo } from './exercise-demo.mjs';
 
 const app = document.querySelector('#app');
 const nav = document.querySelector('.nav');
 const storageKey = 'dynamic-mobility-v1';
-const routineById = Object.fromEntries([...daily, preRun, ...climbing].map(routine => [routine.id, routine]));
+const routineById = Object.fromEntries([...daily, preRun, ...climbing, ...strong].map(routine => [routine.id, routine]));
+const routineSection = routine => routine.variants ? 'today' : strong.includes(routine) ? 'strong' : 'sports';
 const retiredTitles = {
   'hips-ankles':'Hips & Ankles', standing:'Standing Hips & Hamstrings', 'side-reach':'Inner Thighs & Side Reach',
   balance:'Feet, Calves & Balance', rotation:'Hip Flexors & Rotation', 'high-step':'High-Step Mobility',
@@ -12,10 +14,11 @@ const retiredTitles = {
   p3b:'High-Step Setup', p4a:'Shift Sideways', p4b:'Transfer Weight', p5a:'High Foot + Side Reach',
   p5b:'Hips + Upper Back', p6a:'Repeat High Steps', p6b:'Repeat Lateral Reach'
 };
-const navigation = [['today','Today','home'], ['sports','Sports','flag'], ['fiery','Fiery','flame']];
+const navigation = [['today','Today','home'], ['sports','Sports','flag'], ['strong','Strong','weights'], ['fiery','Fiery','flame']];
 const paths = {
   home:'M3 10.5 12 3l9 7.5V21H3z M9 21v-7h6v7',
   flag:'M5 21V4c5-4 9 4 15 0v11c-6 4-10-4-15 0',
+  weights:'M6 6v12m12-12v12M3 9v6m18-6v6M6 12h12',
   flame:'M12 22c-4 0-7-3-7-7 0-4 3-6 5-8 0 3 1 4 2 5 3-3 3-6 2-10 5 4 7 9 7 13 0 4-4 7-9 7z',
   history:'M3 12a9 9 0 1 1 2.5 6.2M3 6v6h6m3-5v5l3 2',
   arrow:'m9 18 6-6-6-6', play:'m9 5 11 7-11 7z', check:'m4 12 5 5L20 6',
@@ -32,6 +35,9 @@ const data = { history:[], workout:null, sound:true, reminder:'', reminded:'', d
 let screen = 'today';
 let shownToday = '';
 let detail = preRun;
+let previewExercise = 0;
+let disposeDemo;
+let demoMotion = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 let finish = null;
 let workout = data.workout && routineById[data.workout.id] ? { ...data.workout, end:null } : null;
 let phases = workout ? timeline(routineById[workout.id], workout.minutes) : [];
@@ -103,22 +109,46 @@ function today() {
 
 function routineDetail() {
   const routine = detail;
+  const section = routineSection(routine);
   const exercises = timeline(routine,routine.minutes).filter(phase => phase.type === 'move' && phase.side !== 'Right');
-  return button('sports','Back to Sports','text-button') + heading(routine.title,routine.setup) + `<section class="panel details">
-    <p>${routineDuration(routine.minutes)} · ${exercises.length} exercises</p>
+  return button(section,section === 'strong' ? 'Back to Strong' : 'Back to Sports','text-button') + heading(routine.title,routine.setup) + `<section class="panel details">
+    <div class="routine-intro">
+      <p>${routineDuration(routine.minutes)} · ${exercises.length} exercises</p>
+      ${button(`start:${routine.id}:${routine.minutes}`,icon('play')+' Start','primary')}
+    </div>
+    <div class="exercise-picker">
+      <label for="exercise-preview">Preview an exercise</label>
+      <select id="exercise-preview">${exercises.map((phase,index) => `<option value="${index}"${index === previewExercise ? ' selected' : ''}>${escape(moves[phase.key].name)}</option>`).join('')}</select>
+    </div>
+    ${exerciseDemo(exercises[previewExercise])}
     <ol class="steps">${exercises.map(phase => `<li><strong>${moves[phase.key].name}</strong><small>${phase.side ? '30 sec per side' : '30 sec'} · ${moves[phase.key].cue}</small></li>`).join('')}</ol>
-    <div class="actions">${button(`start:${routine.id}:${routine.minutes}`,icon('play')+' Start','primary')}</div></section>`;
+  </section>`;
+}
+
+function workoutRow(routine) {
+  return workout?.id === routine.id
+    ? row('resume',routine.title,'Resume workout','play')
+    : row('detail:'+routine.id,routine.title,`${routineDuration(routine.minutes)} · ${routine.setup}`,'clock');
 }
 
 function sportsPage() {
-  const workoutRow = routine => workout?.id === routine.id
-    ? row('resume',routine.title,'Resume workout','play')
-    : row('detail:'+routine.id,routine.title,`${routineDuration(routine.minutes)} · ${routine.setup}`,'clock');
   return heading('Sports')+`
     <div class="columns">
       <section class="panel"><h2>For Runners</h2>${workoutRow(preRun)}</section>
       <section class="panel"><h2>For Climbers</h2>${climbing.map(workoutRow).join('')}</section>
     </div>`;
+}
+
+function strongPage() {
+  return heading('Strong')+`<section class="panel details"><h2>Ab routines</h2>${strong.map(workoutRow).join('')}</section>`;
+}
+
+function exerciseDemo(phase) {
+  const label = `${moves[phase.key].name}${phase.side ? ' · '+phase.side : ''}`;
+  return `<figure class="exercise-demo" data-demo="${phase.key}" data-side="${phase.side || ''}">
+    <canvas width="720" height="340" role="img" aria-label="${escape(label)} demonstration by a male athlete"></canvas>
+    <div class="demo-controls"><button type="button" class="secondary" hidden>Play demo</button></div>
+  </figure>`;
 }
 
 function historyPage() {
@@ -213,7 +243,7 @@ function completeWorkout() {
   if (seconds > 0 && !data.history.some(entry => entry.token === token)) {
     data.history.push({id,day,date,seconds,token,completed:!skipped});
   }
-  finish = {seconds,skipped,returnTo:day ? 'today' : 'sports'};
+  finish = {seconds,skipped,returnTo:routineSection(routineById[id])};
   workout = null;
   phases = [];
   save();
@@ -254,6 +284,7 @@ function tick(now = Date.now()) {
 
 function player() {
   const routine = routineById[workout.id];
+  const section = routineSection(routine);
   const phase = phases[workout.index];
   const next = phases.slice(workout.index+1).find(item => item.type === 'move');
   const moving = phase.type === 'move';
@@ -261,9 +292,11 @@ function player() {
   const name = phase.type === 'ready' ? 'Get ready' : phase.type === 'switch' ? 'Switch sides' : switchingExercise ? 'Switch exercise' : moves[phase.key].name;
   const cue = moving ? moves[phase.key].cue : phase.type === 'ready' ? routine.setup : `${moves[phase.key].name}${phase.side ? ' · '+phase.side : ''}`;
   return `<section class="player">
-    <div class="player-top">${workout.day ? button('today','Back to Today','text-button') : button('sports','Back to Sports','text-button')}<strong>${routine.title}</strong></div>
+    <div class="player-top">${button(section,'Back to '+navigation.find(item => item[0] === section)[1],'text-button')}<strong>${routine.title}</strong></div>
     <div class="player-card"><p class="eyebrow">${phase.number ? `Exercise ${phase.number} of ${phase.count}` : 'Starting soon'}${moving && phase.side ? ' · '+phase.side : ''}</p>
-    <h1>${name}</h1><div class="clock" id="clock" role="timer">${clock(Math.ceil((workout.end ? Math.max(0,workout.end-Date.now()) : workout.left)/1000))}</div><p class="cue">${cue}</p></div>
+    <h1>${name}</h1>
+    ${exerciseDemo(phase.key ? phase : next)}
+    <div class="clock" id="clock" role="timer">${clock(Math.ceil((workout.end ? Math.max(0,workout.end-Date.now()) : workout.left)/1000))}</div><p class="cue">${cue}</p></div>
     ${next && !switchingExercise ? `<p class="player-next muted">Next · ${moves[next.key].name}${next.side ? ' · '+next.side : ''}</p>` : ''}
     <div class="actions">${workout.end ? button('pause','Pause','primary') : button('resume','Resume','primary')}${button('skip',routine.id === preRun.id && moving ? 'Skip exercise' : 'Skip interval')}${button('sound',data.sound?'Mute':'Unmute','text-button')}</div></section>`;
 }
@@ -282,10 +315,17 @@ function reminderBanner() {
   return `<div id="reminder-banner" class="panel row" role="status"><span>Your mobility session is ready.</span>${button('dismiss','Dismiss','text-button')}</div>`;
 }
 function render() {
-  nav.innerHTML = navigation.map(([id,label,symbol]) => `<button data-action="${id}" ${screen === id ? 'aria-current="page"' : ''}>${icon(symbol)}${label}</button>`).join('');
+  disposeDemo?.();
+  const selected = screen === 'detail' ? routineSection(detail) : screen;
+  nav.innerHTML = navigation.map(([id,label,symbol]) => `<button data-action="${id}" ${selected === id ? 'aria-current="page"' : ''}>${icon(symbol)}${label}</button>`).join('');
   nav.hidden = screen === 'player';
-  const views = {today,detail:routineDetail,sports:sportsPage,history:historyPage,player,finish:finishPage,fiery:() => heading('Fiery')+'<section class="panel fiery"><h2>Cardio &amp; HIIT</h2><p>Coming later.</p></section>'};
+  const views = {today,detail:routineDetail,sports:sportsPage,strong:strongPage,history:historyPage,player,finish:finishPage,fiery:() => heading('Fiery')+'<section class="panel fiery"><h2>Cardio &amp; HIIT</h2><p>Coming later.</p></section>'};
   app.innerHTML = views[screen]()+(screen === 'today'?reminderBanner():'')+(storageError?'<p class="hint" role="status">This browser could not save your progress on this device.</p>':'');
+  const demo = app.querySelector('[data-demo]');
+  disposeDemo = demo && mountExerciseDemo(demo,demo.dataset.demo,demo.dataset.side,{
+    playing:demoMotion && (screen !== 'player' || Boolean(workout.end)),
+    onToggle:playing => { demoMotion = playing; }
+  });
 }
 
 document.addEventListener('click',event => {
@@ -293,11 +333,11 @@ document.addEventListener('click',event => {
   if (!action) return;
   const [type,value,minutes] = action.split(':');
   const previous = screen;
-  if (['today','sports','fiery','history'].includes(type)) {
+  if (['today','sports','strong','fiery','history'].includes(type)) {
     if (screen === 'player') pause();
     screen = type;
   } else if (type === 'daily-duration') { data.dailyMinutes = Number(value); save(); }
-  else if (type === 'detail') { detail = routineById[value]; screen = 'detail'; }
+  else if (type === 'detail') { detail = routineById[value]; previewExercise = 0; screen = 'detail'; }
   else if (type === 'start') begin(value,Number(minutes));
   else if (type === 'pause') pause();
   else if (type === 'resume') resume();
@@ -314,6 +354,12 @@ document.addEventListener('click',event => {
     const replacement = [...document.querySelectorAll('[data-action]')].find(item => item.dataset.action === action);
     replacement?.focus({preventScroll:true});
   }
+});
+app.addEventListener('change',event => {
+  if (event.target.id !== 'exercise-preview') return;
+  previewExercise = Number(event.target.value);
+  render();
+  app.querySelector('#exercise-preview').focus({preventScroll:true});
 });
 app.addEventListener('submit',event => {
   if (event.target.id !== 'reminder-form') return;

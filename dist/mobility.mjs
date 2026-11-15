@@ -40,7 +40,18 @@ export const moves = {
   lateralLunges: move('Side-to-side lunges', false, 'Shift from side to side with heels down. Let the bent knee track over your toes.'),
   singleLegRdl: move('Alternating single-leg Romanian deadlifts', false, 'Keep a soft bend in your standing knee and hinge at the hip as the other leg reaches back. Alternate sides.'),
   kickBacks: move('Kick backs', false, 'Stand tall and reach one leg back from the hip. Lower it and alternate sides.'),
-  legExtensions: move('Leg extensions', false, 'Lift one knee, straighten the leg in front, then lower it with control. Alternate sides.')
+  legExtensions: move('Leg extensions', false, 'Lift one knee, straighten the leg in front, then lower it with control. Alternate sides.'),
+  curlUp: move('Curl-up', false, 'Lie with knees bent and feet planted. Exhale as you lift your shoulder blades a little, then lower slowly.', 'Floor'),
+  deadBug: move('Dead bug', false, 'Start on your back with arms up and knees over your hips. Lower opposite arm and leg, then switch. Keep your ribs down.', 'Floor'),
+  reverseCrunch: move('Reverse crunch', false, 'With knees bent, slowly curl your pelvis off the floor. Lower your hips with control.', 'Floor'),
+  heelTaps: move('Alternating heel taps', false, 'From tabletop legs, lower one heel to the floor while keeping your knee bent. Return, then switch.', 'Floor'),
+  hollow: move('Tucked hollow hold', false, 'Lift your shoulder blades and knees, reaching toward your heels. Keep your lower back gently on the floor.', 'Floor'),
+  plank: move('Forearm plank', false, 'Put elbows under shoulders. Brace gently and keep a straight line from shoulders to heels.', 'Floor'),
+  sidePlank: move('Knee-supported side plank', true, 'Rest on the named forearm with knees bent. Lift your hips and keep your shoulders stacked.', 'Floor'),
+  birdDog: move('Bird dog', true, 'From hands and knees, extend the named leg and the opposite arm. Keep your hips level.', 'Floor'),
+  bearTap: move('Bear shoulder taps', true, 'Hover your knees just above the floor. Tap the opposite shoulder with the named hand without shifting your hips.', 'Floor'),
+  bicycle: move('Slow bicycle crunch', false, 'Turn one shoulder toward the opposite knee as you extend the other leg. Lower and switch sides slowly.', 'Floor'),
+  mountain: move('Slow mountain climbers', false, 'From a high plank, draw one knee forward. Place the foot back down before changing sides.', 'Floor')
 };
 
 const routine = (id, title, setup, exercises, minutes = 8) =>
@@ -75,6 +86,11 @@ export const climbing = [
   routine('climb-hips', 'Hips & High Steps', 'Wall, floor and low step', 'heel ankle high step cossack squat switches adductor'),
   routine('climb-shoulders', 'Shoulders, Wrists & Reach', 'Wall and floor', 'arms scap wrists fingers lunge thread cat adductor bridge switches'),
   routine('climb-full', 'Full-Body Climbing Mobility', 'Wall and floor', 'arms circles ankle scap lateral lunge thread cat')
+];
+export const strong = [
+  routine('strong-basics', 'Core Basics', 'Floor space', 'curlUp deadBug heelTaps reverseCrunch hollow plank', 4),
+  routine('strong-stability', 'Core Stability', 'Floor space', 'deadBug heelTaps birdDog plank sidePlank hollow reverseCrunch mountain', 6),
+  routine('strong-circuit', 'Ab Circuit', 'Floor space', 'curlUp deadBug reverseCrunch bicycle heelTaps birdDog plank sidePlank bearTap mountain')
 ];
 const preRunMoves = 'runSwingRight runSwingLeft openGates bodyweightSquat overheadReach footRocks lateralLunges singleLegRdl kickBacks legExtensions';
 const switchSeconds = 5;

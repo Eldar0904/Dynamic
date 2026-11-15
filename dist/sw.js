@@ -1,5 +1,9 @@
-const cacheName = 'dynamic-shell-9';
-const assets = ['./', './index.html', './style.css', './mobility-hero-neutral.jpg', './app.mjs', './mobility.mjs', './app.webmanifest', './icon-192.png', './icon-512.png'];
+const cacheName = 'dynamic-shell-11';
+const assets = [
+  './', './index.html', './style.css', './mobility-hero-neutral.jpg', './app.mjs',
+  './mobility.mjs', './exercise-demo.mjs', './exercise-poses.mjs', './app.webmanifest',
+  './icon-192.png', './icon-512.png'
+];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(cacheName).then(cache => cache.addAll(assets)).then(() => self.skipWaiting()));
