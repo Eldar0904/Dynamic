@@ -1,8 +1,11 @@
-const cacheName = 'dynamic-shell-11';
+const cacheName = 'dynamic-shell-12';
 const assets = [
-  './', './index.html', './style.css', './mobility-hero-neutral.jpg', './app.mjs',
-  './mobility.mjs', './exercise-demo.mjs', './exercise-poses.mjs', './app.webmanifest',
-  './icon-192.png', './icon-512.png'
+  './', './index.html', './style.css', './app.mjs', './mobility.mjs', './exercise-photos.mjs',
+  './app.webmanifest', './icon-192.png', './icon-512.png', './photos/mobility.jpg',
+  './photos/arm-circles.jpg', './photos/open-gates.jpg', './photos/lateral-lunge.jpg',
+  './photos/thread-the-needle.jpg', './photos/quad-stretch.jpg', './photos/straight-knee-calf.jpg',
+  './photos/bent-knee-calf.jpg', './photos/cat-cow.jpg', './photos/bodyweight-squat.jpg',
+  './photos/forearm-plank.jpg', './photos/mountain-climber.jpg'
 ];
 
 self.addEventListener('install', event => {

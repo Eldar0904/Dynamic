@@ -1,5 +1,5 @@
 import { moves, daily, dailyDurations, climbing, strong, preRun, timeline } from './mobility.mjs';
-import { mountExerciseDemo } from './exercise-demo.mjs';
+import { exercisePhotos } from './exercise-photos.mjs';
 
 const app = document.querySelector('#app');
 const nav = document.querySelector('.nav');
@@ -36,8 +36,6 @@ let screen = 'today';
 let shownToday = '';
 let detail = preRun;
 let previewExercise = 0;
-let disposeDemo;
-let demoMotion = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 let finish = null;
 let workout = data.workout && routineById[data.workout.id] ? { ...data.workout, end:null } : null;
 let phases = workout ? timeline(routineById[workout.id], workout.minutes) : [];
@@ -111,16 +109,17 @@ function routineDetail() {
   const routine = detail;
   const section = routineSection(routine);
   const exercises = timeline(routine,routine.minutes).filter(phase => phase.type === 'move' && phase.side !== 'Right');
+  const photographed = exercises.filter(phase => exercisePhotos[phase.key]);
   return button(section,section === 'strong' ? 'Back to Strong' : 'Back to Sports','text-button') + heading(routine.title,routine.setup) + `<section class="panel details">
     <div class="routine-intro">
       <p>${routineDuration(routine.minutes)} · ${exercises.length} exercises</p>
       ${button(`start:${routine.id}:${routine.minutes}`,icon('play')+' Start','primary')}
     </div>
-    <div class="exercise-picker">
-      <label for="exercise-preview">Preview an exercise</label>
-      <select id="exercise-preview">${exercises.map((phase,index) => `<option value="${index}"${index === previewExercise ? ' selected' : ''}>${escape(moves[phase.key].name)}</option>`).join('')}</select>
+    ${photographed.length ? `<div class="exercise-picker">
+      <label for="exercise-preview">Exercise photos</label>
+      <select id="exercise-preview">${photographed.map((phase,index) => `<option value="${index}"${index === previewExercise ? ' selected' : ''}>${escape(moves[phase.key].name)}</option>`).join('')}</select>
     </div>
-    ${exerciseDemo(exercises[previewExercise])}
+    ${exercisePhoto(photographed[previewExercise])}` : ''}
     <ol class="steps">${exercises.map(phase => `<li><strong>${moves[phase.key].name}</strong><small>${phase.side ? '30 sec per side' : '30 sec'} · ${moves[phase.key].cue}</small></li>`).join('')}</ol>
   </section>`;
 }
@@ -143,11 +142,11 @@ function strongPage() {
   return heading('Strong')+`<section class="panel details"><h2>Ab routines</h2>${strong.map(workoutRow).join('')}</section>`;
 }
 
-function exerciseDemo(phase) {
-  const label = `${moves[phase.key].name}${phase.side ? ' · '+phase.side : ''}`;
-  return `<figure class="exercise-demo" data-demo="${phase.key}" data-side="${phase.side || ''}">
-    <canvas width="720" height="340" role="img" aria-label="${escape(label)} demonstration by a male athlete"></canvas>
-    <div class="demo-controls"><button type="button" class="secondary" hidden>Play demo</button></div>
+function exercisePhoto(phase) {
+  const src = exercisePhotos[phase.key];
+  if (!src) return '';
+  return `<figure class="exercise-photo">
+    <img src="./photos/${src}" alt="${escape(moves[phase.key].name)} demonstrated by a man" decoding="async">
   </figure>`;
 }
 
@@ -295,7 +294,7 @@ function player() {
     <div class="player-top">${button(section,'Back to '+navigation.find(item => item[0] === section)[1],'text-button')}<strong>${routine.title}</strong></div>
     <div class="player-card"><p class="eyebrow">${phase.number ? `Exercise ${phase.number} of ${phase.count}` : 'Starting soon'}${moving && phase.side ? ' · '+phase.side : ''}</p>
     <h1>${name}</h1>
-    ${exerciseDemo(phase.key ? phase : next)}
+    ${exercisePhoto(phase.key ? phase : next)}
     <div class="clock" id="clock" role="timer">${clock(Math.ceil((workout.end ? Math.max(0,workout.end-Date.now()) : workout.left)/1000))}</div><p class="cue">${cue}</p></div>
     ${next && !switchingExercise ? `<p class="player-next muted">Next · ${moves[next.key].name}${next.side ? ' · '+next.side : ''}</p>` : ''}
     <div class="actions">${workout.end ? button('pause','Pause','primary') : button('resume','Resume','primary')}${button('skip',routine.id === preRun.id && moving ? 'Skip exercise' : 'Skip interval')}${button('sound',data.sound?'Mute':'Unmute','text-button')}</div></section>`;
@@ -315,17 +314,11 @@ function reminderBanner() {
   return `<div id="reminder-banner" class="panel row" role="status"><span>Your mobility session is ready.</span>${button('dismiss','Dismiss','text-button')}</div>`;
 }
 function render() {
-  disposeDemo?.();
   const selected = screen === 'detail' ? routineSection(detail) : screen;
   nav.innerHTML = navigation.map(([id,label,symbol]) => `<button data-action="${id}" ${selected === id ? 'aria-current="page"' : ''}>${icon(symbol)}${label}</button>`).join('');
   nav.hidden = screen === 'player';
   const views = {today,detail:routineDetail,sports:sportsPage,strong:strongPage,history:historyPage,player,finish:finishPage,fiery:() => heading('Fiery')+'<section class="panel fiery"><h2>Cardio &amp; HIIT</h2><p>Coming later.</p></section>'};
   app.innerHTML = views[screen]()+(screen === 'today'?reminderBanner():'')+(storageError?'<p class="hint" role="status">This browser could not save your progress on this device.</p>':'');
-  const demo = app.querySelector('[data-demo]');
-  disposeDemo = demo && mountExerciseDemo(demo,demo.dataset.demo,demo.dataset.side,{
-    playing:demoMotion && (screen !== 'player' || Boolean(workout.end)),
-    onToggle:playing => { demoMotion = playing; }
-  });
 }
 
 document.addEventListener('click',event => {
